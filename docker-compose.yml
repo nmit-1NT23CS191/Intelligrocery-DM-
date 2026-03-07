@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ig_db
+    environment:
+      POSTGRES_DB: intelligrocery
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: ig_backend
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      JWT_SECRET: intelligrocery_super_secret_key_2024
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: intelligrocery
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      ML_SERVICE_URL: http://ml:8000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+
+  ml:
+    build: ./ml
+    container_name: ig_ml
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    container_name: ig_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  uploads_data:
